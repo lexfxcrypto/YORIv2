@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YORI – Your Own AI Tutor</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&family=Caveat:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sage:#4a7c59;--sage-light:#6aab7a;--sage-pale:#e8f3eb;
+  --amber:#e8a838;--amber-pale:#fdf3e0;
+  --ink:#1a1a2e;--cream:#faf8f3;--white:#ffffff;
+  --muted:#6b7280;--border:#e5e1d8;
+  --shadow:0 4px 24px rgba(26,26,46,0.07);
+  --shadow-lg:0 12px 48px rgba(26,26,46,0.13);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column;animation:fadeUp 0.3s ease}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* NAV */
+nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:'Fraunces',serif;font-size:1.55rem;font-weight:700;color:var(--sage);cursor:pointer;display:inline-flex;align-items:flex-end;gap:0}
+.logo span{color:var(--amber)}
+.logo-i{position:relative;display:inline-block}
+.logo-ai{position:absolute;top:-0.82em;left:50%;transform:translateX(-50%) rotate(-8deg);font-family:'Caveat',cursive;font-size:1.4em;font-weight:700;color:#1a1a1a;line-height:1;pointer-events:none;text-shadow:2px 2px 0px rgba(0,0,0,0.15)}
+.nav-links{display:flex;gap:6px;align-items:center}
+.nav-btn{background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;color:var(--muted);padding:7px 13px;border-radius:8px;transition:all 0.2s}
+.nav-btn:hover,.nav-btn.active{background:var(--sage-pale);color:var(--sage)}
+.nav-badge{background:var(--sage);color:white;font-size:0.7rem;font-weight:600;padding:1px 7px;border-radius:20px;margin-left:5px}
+
+/* LAYOUT */
+.page{flex:1;padding:36px 28px;max-width:980px;margin:0 auto;width:100%}
+.page.wide{max-width:1120px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;cursor:pointer;border:none;transition:all 0.2s;text-decoration:none}
+.btn-primary{background:var(--sage);color:white;box-shadow:0 3px 14px rgba(74,124,89,0.28)}
+.btn-primary:hover{background:#3d6b4c;transform:translateY(-1px)}
+.btn-amber{background:var(--amber);color:white;box-shadow:0 3px 14px rgba(232,168,56,0.28)}
+.btn-amber:hover{background:#d4952a;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.btn-ghost:hover{color:var(--sage);border-color:var(--sage)}
+.btn-sm{padding:7px 14px;font-size:0.82rem}
+.btn-white{background:white;color:var(--ink);border:1.5px solid var(--border)}
+.btn-white:hover{border-color:var(--sage);color:var(--sage)}
+
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:26px}
+.card-sm{padding:18px}
+.card h3{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;margin-bottom:16px}
+
+/* FORMS */
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:0.84rem;font-weight:500;margin-bottom:7px;color:var(--ink)}
+.form-label .opt{color:var(--muted);font-weight:400}
+.form-input,.form-select,.form-textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--ink);background:var(--cream);outline:none;transition:border-color 0.2s;appearance:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--sage);background:white}
+.form-textarea{resize:vertical;min-height:90px}
+
+/* PILLS */
+.pill-row{display:flex;flex-wrap:wrap;gap:8px}
+.pill{padding:8px 15px;border-radius:8px;border:1.5px solid var(--border);background:white;cursor:pointer;font-size:0.85rem;font-family:'DM Sans',sans-serif;transition:all 0.15s;color:var(--ink)}
+.pill:hover{border-color:var(--sage);color:var(--sage)}
+.pill.on{border-color:var(--sage);background:var(--sage-pale);color:var(--sage);font-weight:500}
+
+/* TAGS */
+.tag{display:inline-block;font-size:0.73rem;font-weight:600;padding:3px 9px;border-radius:20px}
+.tag-green{background:var(--sage-pale);color:var(--sage)}
+.tag-amber{background:var(--amber-pale);color:var(--amber)}
+.tag-blue{background:#e8eef8;color:#5b8dd9}
+.tag-red{background:#fde8e8;color:#c44444}
+
+/* PAGE HEADERS */
+.pg-header{margin-bottom:28px}
+.pg-header h2{font-family:'Fraunces',serif;font-size:1.85rem;font-weight:600}
+.pg-header p{color:var(--muted);margin-top:4px;font-size:0.92rem}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat{background:white;border:1px solid var(--border);border-radius:14px;padding:20px}
+.stat-label{font-size:0.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px}
+.stat-val{font-family:'Fraunces',serif;font-size:1.9rem;font-weight:700}
+.stat-sub{font-size:0.78rem;color:var(--sage);margin-top:3px}
+
+/* GRID */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.full{grid-column:1/-1}
+
+/* STUDENT ROW */
+.student-row{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:var(--cream);border-radius:10px;cursor:pointer;transition:all 0.2s;margin-bottom:10px}
+.student-row:hover{background:var(--sage-pale)}
+.s-info{display:flex;align-items:center;gap:11px}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.85rem;color:white;flex-shrink:0}
+.av-green{background:var(--sage)}.av-amber{background:var(--amber)}.av-blue{background:#5b8dd9}
+.s-name{font-weight:500;font-size:0.92rem}
+.s-year{font-size:0.78rem;color:var(--muted)}
+
+/* ACTIVITY */
+.activity-item{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--sage);margin-top:6px;flex-shrink:0}
+.dot.amber{background:var(--amber)}
+.act-text{font-size:0.875rem;line-height:1.5}
+.act-time{font-size:0.75rem;color:var(--muted);margin-top:2px}
+
+/* SESSION TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;padding:9px 13px;border-bottom:2px solid var(--border)}
+.tbl td{padding:13px;font-size:0.875rem;border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--cream)}
+
+/* BUILDER */
+.builder-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.builder-out{background:var(--ink);border-radius:16px;padding:28px;color:white;position:sticky;top:78px}
+.builder-out h3{font-family:'Fraunces',serif;color:white;margin-bottom:4px}
+.out-sub{font-size:0.8rem;color:rgba(255,255,255,0.45);margin-bottom:18px}
+.out-tabs{display:flex;gap:4px;margin-bottom:14px}
+.out-tab{padding:5px 11px;border-radius:6px;font-size:0.78rem;cursor:pointer;color:rgba(255,255,255,0.45);transition:all 0.2s;border:none;background:none;font-family:'DM Sans',sans-serif}
+.out-tab.active{background:rgba(255,255,255,0.1);color:white}
+.prompt-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:18px;font-size:0.845rem;line-height:1.75;color:rgba(255,255,255,0.82);min-height:200px;white-space:pre-wrap}
+.prompt-empty{color:rgba(255,255,255,0.25);font-style:italic}
+.flow-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:8px}
+.flow-num{background:var(--sage);color:white;width:20px;height:20px;border-radius:50%;font-size:0.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.flow-txt{font-size:0.82rem;color:rgba(255,255,255,0.72);line-height:1.5}
+.copy-btn{display:flex;align-items:center;gap:6px;background:var(--sage);color:white;border:none;padding:9px 16px;border-radius:8px;font-size:0.83rem;cursor:pointer;margin-top:13px;font-family:'DM Sans',sans-serif;transition:all 0.2s}
+.copy-btn:hover{background:var(--sage-light)}
+.insight{background:var(--amber-pale);border:1px solid rgba(232,168,56,0.28);border-radius:9px;padding:13px 15px;margin-top:14px}
+.insight-lbl{font-size:0.72rem;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px}
+.insight p{font-size:0.83rem;color:var(--ink);line-height:1.5}
+
+/* PHOTO UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:36px 24px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--cream)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--sage);background:var(--sage-pale)}
+.upload-zone input{display:none}
+.upload-icon{font-size:2.4rem;margin-bottom:10px}
+.upload-zone h4{font-size:0.95rem;font-weight:600;margin-bottom:4px}
+.upload-zone p{font-size:0.82rem;color:var(--muted)}
+.photo-preview{position:relative;margin-top:14px}
+.photo-preview img{width:100%;border-radius:10px;border:1px solid var(--border)}
+.photo-remove{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);color:white;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center}
+
+/* LANDING */
+.hero{text-align:center;padding:80px 20px 56px;max-width:660px;margin:0 auto}
+.hero-badge{display:inline-block;background:var(--amber-pale);color:var(--amber);font-size:0.75rem;font-weight:600;padding:5px 13px;border-radius:20px;margin-bottom:20px;letter-spacing:0.4px;text-transform:uppercase}
+.hero h1{font-family:'Fraunces',serif;font-size:3rem;font-weight:700;line-height:1.15;margin-bottom:18px}
+.hero h1 em{font-style:italic;color:var(--sage)}
+.hero p{font-size:1.1rem;color:var(--muted);line-height:1.7;margin-bottom:32px;font-weight:300}
+.hero-cta{display:flex;gap:11px;justify-content:center;flex-wrap:wrap}
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:56px 0 0}
+.feat-card{background:white;border:1px solid var(--border);border-radius:16px;padding:26px;transition:all 0.2s}
+.feat-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.feat-icon{font-size:1.9rem;margin-bottom:12px}
+.feat-card h3{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;margin-bottom:7px}
+.feat-card p{font-size:0.875rem;color:var(--muted);line-height:1.6}
+
+/* AUTH */
+.auth-wrap{max-width:420px;margin:60px auto;padding:0 20px}
+.auth-card{background:white;border:1px solid var(--border);border-radius:20px;padding:36px}
+.auth-logo{font-family:'Fraunces',serif;font-size:2rem;font-weight:700;color:var(--sage);text-align:center;margin-bottom:6px;display:flex;align-items:flex-end;justify-content:center;gap:0}
+.auth-logo span{color:var(--amber)}
+.auth-sub{text-align:center;color:var(--muted);font-size:0.875rem;margin-bottom:28px}
+.auth-switch{text-align:center;margin-top:20px;font-size:0.875rem;color:var(--muted)}
+.auth-switch a{color:var(--sage);cursor:pointer;text-decoration:none;font-weight:500}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:white;border-radius:20px;padding:32px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:fadeUp 0.25s ease}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.modal-header h3{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600}
+.modal-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:4px}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:48px 24px}
+.empty-icon{font-size:2.8rem;margin-bottom:14px}
+.empty h3{font-family:'Fraunces',serif;font-size:1.2rem;margin-bottom:8px}
+.empty p{color:var(--muted);font-size:0.9rem;margin-bottom:20px}
+
+/* PROGRESS */
+.prog-wrap{margin-bottom:13px}
+.prog-labels{display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:5px}
+.prog-bar{height:7px;background:var(--border);border-radius:20px;overflow:hidden}
+.prog-fill{height:100%;border-radius:20px;background:var(--sage);transition:width 0.5s}
+.prog-fill.amber{background:var(--amber)}
+.prog-fill.blue{background:#5b8dd9}
+
+/* GAP ALERT */
+.gap-alert{display:flex;gap:13px;align-items:flex-start;background:var(--amber-pale);border:1px solid rgba(232,168,56,0.35);border-radius:12px;padding:15px 17px;margin-bottom:11px}
+.gap-alert h4{font-size:0.88rem;font-weight:600;margin-bottom:2px}
+.gap-alert p{font-size:0.8rem;color:var(--muted);line-height:1.5}
+
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+/* BACK BTN */
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:0.875rem;cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:'DM Sans',sans-serif}
+.back-btn:hover{color:var(--sage)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .two-col,.builder-wrap{grid-template-columns:1fr}
+  .three-col,.feat-grid{grid-template-columns:1fr}
+  .hero h1{font-size:2.1rem}
+  .page{padding:24px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+  NAV (hidden on landing/auth)
+═══════════════════════════════════════ -->
+<nav id="app-nav" style="display:none">
+  <div class="logo" onclick="go('dashboard')">YOR<span class="logo-i">I<span class="logo-ai">a</span></span></div>
+  <div class="nav-links">
+    <button class="nav-btn" onclick="go('dashboard')" id="nav-dashboard">Dashboard</button>
+    <button class="nav-btn" onclick="go('builder')" id="nav-builder">Tutor Builder</button>
+    <button class="nav-btn" onclick="go('sessions')" id="nav-sessions">Sessions <span class="nav-badge">7</span></button>
+    <button class="nav-btn" onclick="go('insights')" id="nav-insights">Insights</button>
+    <button class="nav-btn" onclick="go('landing')" style="margin-left:8px;color:var(--muted)">Log out</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: LANDING
+═══════════════════════════════════════ -->
+<div class="screen active" id="screen-landing">
+  <div class="page" style="max-width:860px">
+    <div class="hero">
+      <div class="hero-badge">🇬🇧 Built for UK Families · Ages 5–16</div>
+
+      <!-- BIG HERO LOGO -->
+      <div style="font-family:'Fraunces',serif;font-size:5.5rem;font-weight:700;color:var(--sage);line-height:1;margin-bottom:8px;display:inline-flex;align-items:flex-end;justify-content:center;gap:0">
+        YOR<span style="position:relative;display:inline-block">I<span style="position:absolute;top:-0.82em;left:50%;transform:translateX(-50%) rotate(-8deg);font-family:'Caveat',cursive;font-size:1.4em;font-weight:700;color:#1a1a1a;line-height:1;text-shadow:2px 2px 0px rgba(0,0,0,0.15)">a</span></span>
+      </div>
+      <div style="font-size:1rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;font-weight:500;margin-bottom:28px">Your Own AI Tutor</div>
+
+      <h1>Turn AI into a tutor, <em>not a shortcut</em></h1>
+      <p>YORI helps students use AI step by step for homework and revision, so they learn properly instead of copying answers.</p>
+      <div class="hero-cta">
+        <button class="btn btn-primary" onclick="go('signup')">✦ Start Free</button>
+        <button class="btn btn-white" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See How It Works</button>
+      </div>
+    </div>
+    <div class="feat-grid" id="how">
+      <div class="feat-card"><div class="feat-icon">🧠</div><h3>Teach-First Prompts</h3><p>Every AI session starts with explanation, not answers. Students understand before they move on.</p></div>
+      <div class="feat-card"><div class="feat-icon">👨‍👩‍👧</div><h3>Parent Visibility</h3><p>See exactly what your child is working on and spot topics they keep coming back to.</p></div>
+      <div class="feat-card"><div class="feat-icon">📚</div><h3>Better Homework Support</h3><p>Structured help for Maths, English and Science aligned to the UK secondary curriculum.</p></div>
+      <div class="feat-card"><div class="feat-icon">📸</div><h3>Photo to Prompt</h3><p>Snap a photo of any homework question. YORI reverse-engineers a teaching prompt instantly.</p></div>
+      <div class="feat-card"><div class="feat-icon">🔒</div><h3>Safe by Design</h3><p>Built for ages 11–16. No unstructured AI access. No inappropriate content.</p></div>
+      <div class="feat-card"><div class="feat-icon">⚡</div><h3>Works With Any AI</h3><p>Use YORI prompts with ChatGPT, Claude, or any AI tool your family already uses.</p></div>
+    </div>
+    <div style="background:var(--ink);border-radius:20px;padding:48px;text-align:center;margin-top:56px">
+      <h2 style="font-family:'Fraunces',serif;color:white;font-size:1.8rem;margin-bottom:10px">Ready to help your child learn properly?</h2>
+      <p style="color:rgba(255,255,255,0.6);margin-bottom:24px">Join families using YORI to build real understanding — not copied answers.</p>
+      <button class="btn btn-amber" onclick="go('signup')">✦ Get Started Free — £7/month</button>
+    </div>
+    <div style="text-align:center;padding:32px 0;border-top:1px solid var(--border);margin-top:40px">
+      <div class="logo" style="margin-bottom:6px">YOR<span class="logo-i">I<span class="logo-ai">a</span></span></div>
+      <p style="font-size:0.82rem;color:var(--muted)">Your Own AI Tutor · Built for UK families · © 2025 YORI</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: SIGN UP
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-signup">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">YOR<span class="logo-i">I<span class="logo-ai">a</span></span></div>
+      <div class="auth-sub">Create your parent account</div>
+      <div class="form-group">
+        <label class="form-label">Your name</label>
+        <input class="form-input" placeholder="e.g. Alex Johnson" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input class="form-input" type="email" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" placeholder="Min 8 characters" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="go('dashboard')">Create Account →</button>
+      <div class="auth-switch">Already have an account? <a onclick="go('login')">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: LOGIN
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-login">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">YOR<span class="logo-i">I<span class="logo-ai">a</span></span></div>
+      <div class="auth-sub">Welcome back</div>
+      <div class="form-group">
+        <label class="form-label">Email address</label>
+        <input class="form-input" type="email" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" placeholder="Your password" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="go('dashboard')">Log In →</button>
+      <div class="auth-switch">Don't have an account? <a onclick="go('signup')">Sign up free</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: DASHBOARD
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-dashboard">
+  <div class="page wide">
+    <div class="pg-header">
+      <h2>Good morning, Alex 👋</h2>
+      <p>Here's what's happening with your children's learning this week.</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat"><div class="stat-label">Sessions This Week</div><div class="stat-val">7</div><div class="stat-sub">↑ 3 more than last week</div></div>
+      <div class="stat"><div class="stat-label">Active Students</div><div class="stat-val">2</div><div class="stat-sub">Sonny & Haze</div></div>
+      <div class="stat"><div class="stat-label">Top Subject</div><div class="stat-val" style="font-size:1.3rem">Maths</div><div class="stat-sub">4 sessions this week</div></div>
+      <div class="stat"><div class="stat-label">Learning Gaps</div><div class="stat-val" style="color:var(--amber)">2</div><div class="stat-sub" style="color:var(--amber)">Needs attention</div></div>
+    </div>
+
+    <div class="two-col">
+      <!-- Students -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <h3 style="margin:0">Your Students</h3>
+          <button class="btn btn-sm btn-ghost" onclick="openAddStudent()">+ Add Student</button>
+        </div>
+        <div class="student-row" onclick="go('student-sonny')">
+          <div class="s-info">
+            <div class="avatar av-green">S</div>
+            <div><div class="s-name">Sonny</div><div class="s-year">Year 7 · Age 11</div></div>
+          </div>
+          <span class="tag tag-amber">⚠ 2 gaps</span>
+        </div>
+        <div class="student-row" onclick="go('student-haze')">
+          <div class="s-info">
+            <div class="avatar av-blue">H</div>
+            <div><div class="s-name">Haze</div><div class="s-year">Year 2 · Age 6</div></div>
+          </div>
+          <span class="tag tag-green">✓ On track</span>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <h3>Recent Activity</h3>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text"><strong>Sonny</strong> used Tutor Builder — Maths · Algebra</div><div class="act-time">Today, 4:22pm</div></div></div>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text"><strong>Haze</strong> used Photo Prompt — English · Creative Writing</div><div class="act-time">Today, 3:10pm</div></div></div>
+        <div class="activity-item"><div class="dot amber"></div><div><div class="act-text"><strong>Sonny</strong> has used Algebra prompts 4× — possible gap detected</div><div class="act-time">System insight · Thu</div></div></div>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text"><strong>Sonny</strong> used Tutor Builder — Science · Forces</div><div class="act-time">Thu, 5:45pm</div></div></div>
+      </div>
+
+      <!-- Quick action -->
+      <div class="card" style="background:linear-gradient(135deg,var(--ink) 0%,#2d3561 100%);border-color:transparent">
+        <h3 style="color:white;margin-bottom:8px">Start a session now</h3>
+        <p style="font-size:0.875rem;color:rgba(255,255,255,0.6);line-height:1.6;margin-bottom:18px">Build a structured AI tutor prompt in under a minute.</p>
+        <button class="btn btn-amber" onclick="go('builder')">✦ Open Tutor Builder</button>
+      </div>
+
+      <!-- Photo prompt CTA -->
+      <div class="card" style="background:var(--sage-pale);border-color:rgba(74,124,89,0.2)">
+        <h3 style="margin-bottom:8px">📸 Got homework to hand?</h3>
+        <p style="font-size:0.875rem;color:var(--muted);line-height:1.6;margin-bottom:18px">Take a photo of any homework question. YORI will build a teaching prompt automatically.</p>
+        <button class="btn btn-primary" onclick="go('photo-prompt')">Try Photo to Prompt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: STUDENT DETAIL — SONNY
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-student-sonny">
+  <div class="page wide">
+    <button class="back-btn" onclick="go('dashboard')">← Back to Dashboard</button>
+    <div class="pg-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="display:flex;align-items:center;gap:13px;margin-bottom:6px">
+          <div class="avatar av-green" style="width:48px;height:48px;font-size:1.1rem">S</div>
+          <div>
+            <h2 style="font-family:'Fraunces',serif;font-size:1.7rem;font-weight:600;margin:0">Sonny</h2>
+            <div style="color:var(--muted);font-size:0.88rem">Year 7 · Age 11</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="go('builder')">✦ Open Tutor Builder</button>
+    </div>
+
+    <div class="two-col" style="margin-bottom:20px">
+      <div class="card card-sm">
+        <div class="stat-label">Strengths</div>
+        <p style="font-size:0.875rem;margin-top:6px">Good at creative writing, strong verbal reasoning</p>
+      </div>
+      <div class="card card-sm">
+        <div class="stat-label">Areas to Improve</div>
+        <p style="font-size:0.875rem;margin-top:6px">Algebra, algebraic notation, equation solving</p>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Subject Usage</h3>
+        <div class="prog-wrap"><div class="prog-labels"><span>Maths</span><span style="color:var(--muted)">4 sessions</span></div><div class="prog-bar"><div class="prog-fill amber" style="width:80%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>Science</span><span style="color:var(--muted)">1 session</span></div><div class="prog-bar"><div class="prog-fill blue" style="width:20%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>English</span><span style="color:var(--muted)">0 sessions</span></div><div class="prog-bar"><div class="prog-fill" style="width:2%"></div></div></div>
+      </div>
+      <div class="card">
+        <h3>Recent Sessions</h3>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text">Maths · Algebra – solving equations</div><div class="act-time">Today, 4:22pm · Homework Help</div></div></div>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text">Science · Forces – Newton's laws</div><div class="act-time">Thu, 5:45pm · Concept Explanation</div></div></div>
+        <div class="activity-item"><div class="dot"></div><div><div class="act-text">Maths · Algebra – substitution</div><div class="act-time">Thu, 4:01pm · Revision</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: STUDENT DETAIL — HAZE
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-student-haze">
+  <div class="page wide">
+    <button class="back-btn" onclick="go('dashboard')">← Back to Dashboard</button>
+    <div class="pg-header" style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="display:flex;align-items:center;gap:13px">
+        <div class="avatar av-blue" style="width:48px;height:48px;font-size:1.1rem">H</div>
+        <div>
+          <h2 style="font-family:'Fraunces',serif;font-size:1.7rem;font-weight:600;margin:0">Haze</h2>
+          <div style="color:var(--muted);font-size:0.88rem">Year 2 · Age 6</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="go('builder')">✦ Open Tutor Builder</button>
+    </div>
+    <div class="card" style="max-width:480px">
+      <h3>Recent Sessions</h3>
+      <div class="activity-item"><div class="dot"></div><div><div class="act-text">English · Creative Writing – character description</div><div class="act-time">Today, 3:10pm · Homework Help</div></div></div>
+      <div class="activity-item"><div class="dot"></div><div><div class="act-text">English · Reading – inference questions</div><div class="act-time">Tue, 5:00pm · Revision</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: TUTOR BUILDER
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-builder">
+  <div class="page wide">
+    <div class="pg-header">
+      <h2>Tutor Builder</h2>
+      <p>Build a structured AI tutoring prompt in a few clicks.</p>
+    </div>
+
+    <div class="builder-wrap">
+      <!-- FORM -->
+      <div class="card">
+        <div class="form-group">
+          <label class="form-label">Who is this for?</label>
+          <select class="form-select" id="b-student" onchange="liveUpdate()">
+            <option value="Sonny|Year 7">Sonny (Year 7)</option>
+            <option value="Haze|Year 2">Haze (Year 7)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <div class="pill-row" id="b-subjects">
+            <button class="pill on" onclick="pickPill('subject',this,'Maths')">📐 Maths</button>
+            <button class="pill" onclick="pickPill('subject',this,'English')">📖 English</button>
+            <button class="pill" onclick="pickPill('subject',this,'Science')">🔬 Science</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Topic</label>
+          <input class="form-input" id="b-topic" placeholder="e.g. Algebra, Photosynthesis, WW2 Poetry..." oninput="liveUpdate()" value="Algebra – solving equations" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type of help</label>
+          <div class="pill-row" id="b-helptypes">
+            <button class="pill on" onclick="pickPill('helptype',this,'Guide step by step')">🪜 Guide step by step</button>
+            <button class="pill" onclick="pickPill('helptype',this,'Explain the concept')">💡 Explain the concept</button>
+            <button class="pill" onclick="pickPill('helptype',this,'Revision quiz')">🔁 Revision quiz</button>
+            <button class="pill" onclick="pickPill('helptype',this,'Practice questions')">✏️ Practice questions</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Extra notes <span class="opt">(optional)</span></label>
+          <textarea class="form-textarea" id="b-notes" placeholder="e.g. Sonny finds negative numbers confusing. Focus on those if they come up." oninput="liveUpdate()"></textarea>
+        </div>
+
+        <hr>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="generatePrompt()">✦ Generate Tutor Prompt</button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="builder-out">
+        <h3>Your Tutor Prompt</h3>
+        <p class="out-sub">Copy this into ChatGPT, Claude, or any AI tool</p>
+        <div class="out-tabs">
+          <button class="out-tab active" onclick="switchTab('prompt',this)">Prompt</button>
+          <button class="out-tab" onclick="switchTab('flow',this)">Tutoring Flow</button>
+          <button class="out-tab" onclick="switchTab('parent',this)">Parent Guide</button>
+        </div>
+
+        <div id="tab-prompt">
+          <div class="prompt-box" id="prompt-out"><span class="prompt-empty">Fill in the form and click Generate Tutor Prompt to see your structured prompt here.</span></div>
+          <button class="copy-btn" onclick="copyPrompt()">📋 Copy Prompt</button>
+        </div>
+
+        <div id="tab-flow" style="display:none">
+          <div class="flow-step"><div class="flow-num">1</div><div class="flow-txt"><strong>Concept Introduction</strong> — AI explains the topic with a simple example first</div></div>
+          <div class="flow-step"><div class="flow-num">2</div><div class="flow-txt"><strong>Check Understanding</strong> — AI asks the student a question before moving on</div></div>
+          <div class="flow-step"><div class="flow-num">3</div><div class="flow-txt"><strong>Guided Practice</strong> — AI gives a practice problem and coaches through it</div></div>
+          <div class="flow-step"><div class="flow-num">4</div><div class="flow-txt"><strong>Hint System</strong> — If stuck, AI offers a hint rather than the answer</div></div>
+          <div class="flow-step"><div class="flow-num">5</div><div class="flow-txt"><strong>Consolidation</strong> — AI summarises learning and sets a mini challenge</div></div>
+        </div>
+
+        <div id="tab-parent" style="display:none">
+          <div class="flow-step"><div class="flow-num">💡</div><div class="flow-txt"><strong>What this session is for:</strong> Helping your child understand the topic step by step, without skipping to answers.</div></div>
+          <div class="flow-step"><div class="flow-num">✅</div><div class="flow-txt"><strong>After the session:</strong> Ask your child to explain one thing they learned in their own words.</div></div>
+          <div class="flow-step"><div class="flow-num">🚩</div><div class="flow-txt"><strong>Watch out for:</strong> If they paste homework questions without engaging with the AI's responses — gently redirect them.</div></div>
+        </div>
+
+        <div class="insight">
+          <div class="insight-lbl">⚠ Learning Insight</div>
+          <p id="insight-txt">Sonny has used Algebra prompts 4 times this week. This may indicate a recurring difficulty. Consider a longer revision session.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: PHOTO TO PROMPT
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-photo-prompt">
+  <div class="page wide">
+    <button class="back-btn" onclick="go('dashboard')">← Back to Dashboard</button>
+    <div class="pg-header">
+      <h2>📸 Photo to Prompt</h2>
+      <p>Take a photo of any homework question. YORI builds a structured teaching prompt automatically.</p>
+    </div>
+
+    <div class="builder-wrap">
+      <!-- UPLOAD FORM -->
+      <div>
+        <div class="card" style="margin-bottom:20px">
+          <h3>Upload Homework Photo</h3>
+          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('hw-file').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+            <input type="file" id="hw-file" accept="image/*" onchange="handleFile(event)">
+            <div id="upload-placeholder">
+              <div class="upload-icon">📷</div>
+              <h4>Click to upload or drag a photo here</h4>
+              <p>Supports JPG, PNG · Max 10MB</p>
+            </div>
+            <div id="photo-preview-wrap" class="photo-preview" style="display:none">
+              <img id="photo-preview-img" src="" alt="Homework photo">
+              <button class="photo-remove" onclick="removePhoto(event)">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>A few quick details</h3>
+          <div class="form-group">
+            <label class="form-label">Who is this for?</label>
+            <select class="form-select">
+              <option>Sonny (Year 7)</option>
+              <option>Haze (Year 2)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject</label>
+            <div class="pill-row">
+              <button class="pill on" onclick="pickPill('photo-subject',this,'Maths')">📐 Maths</button>
+              <button class="pill" onclick="pickPill('photo-subject',this,'English')">📖 English</button>
+              <button class="pill" onclick="pickPill('photo-subject',this,'Science')">🔬 Science</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Any extra context? <span class="opt">(optional)</span></label>
+            <textarea class="form-textarea" placeholder="e.g. This is from Sonny's Year 7 maths worksheet on solving equations"></textarea>
+          </div>
+          <hr>
+          <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="generatePhotoPrompt()">📸 Generate Prompt from Photo</button>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="builder-out">
+        <h3>Generated Prompt</h3>
+        <p class="out-sub">Copy this into ChatGPT, Claude, or any AI tool</p>
+        <div class="prompt-box" id="photo-prompt-out"><span class="prompt-empty">Upload a photo and click Generate to see your prompt here.</span></div>
+        <button class="copy-btn" onclick="copyPhotoPrompt()">📋 Copy Prompt</button>
+
+        <div class="insight" style="margin-top:14px">
+          <div class="insight-lbl">💡 How this works</div>
+          <p>YORI analyses the homework question in the photo and builds a prompt that tells the AI to teach the concept — not just give the answer.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: SESSIONS
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-sessions">
+  <div class="page wide">
+    <div class="pg-header">
+      <h2>Session History</h2>
+      <p>Every tutoring prompt generated across all students.</p>
+    </div>
+    <div class="card">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Student</th><th>Subject</th><th>Topic</th><th>Type</th><th>Date</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><div class="s-info"><div class="avatar av-green" style="width:28px;height:28px;font-size:0.75rem">S</div>Sonny</div></td><td><span class="tag tag-amber">Maths</span></td><td>Algebra – solving equations</td><td>Guide step by step</td><td style="color:var(--muted)">Today, 4:22pm</td><td><button class="btn btn-sm btn-ghost" onclick="go('builder')">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-blue" style="width:28px;height:28px;font-size:0.75rem">H</div>Haze</div></td><td><span class="tag tag-green">English</span></td><td>Creative Writing – character description</td><td>Homework Help</td><td style="color:var(--muted)">Today, 3:10pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-green" style="width:28px;height:28px;font-size:0.75rem">S</div>Sonny</div></td><td><span class="tag tag-blue">Science</span></td><td>Forces – Newton's laws</td><td>Explain the concept</td><td style="color:var(--muted)">Thu, 5:45pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-green" style="width:28px;height:28px;font-size:0.75rem">S</div>Sonny</div></td><td><span class="tag tag-amber">Maths</span></td><td>Algebra – substitution</td><td>Revision quiz</td><td style="color:var(--muted)">Thu, 4:01pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-green" style="width:28px;height:28px;font-size:0.75rem">S</div>Sonny</div></td><td><span class="tag tag-amber">Maths</span></td><td>Algebra – expressions</td><td>Guide step by step</td><td style="color:var(--muted)">Tue, 6:12pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-blue" style="width:28px;height:28px;font-size:0.75rem">H</div>Haze</div></td><td><span class="tag tag-green">English</span></td><td>Reading – inference questions</td><td>Revision quiz</td><td style="color:var(--muted)">Tue, 5:00pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+          <tr><td><div class="s-info"><div class="avatar av-green" style="width:28px;height:28px;font-size:0.75rem">S</div>Sonny</div></td><td><span class="tag tag-amber">Maths</span></td><td>Algebra – forming equations</td><td>Practice questions</td><td style="color:var(--muted)">Mon, 7:30pm</td><td><button class="btn btn-sm btn-ghost">View</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  SCREEN: INSIGHTS
+═══════════════════════════════════════ -->
+<div class="screen" id="screen-insights">
+  <div class="page wide">
+    <div class="pg-header">
+      <h2>Learning Insights</h2>
+      <p>Patterns and possible gaps detected from session history.</p>
+    </div>
+    <div class="two-col">
+      <div class="card full">
+        <h3>⚠ Possible Learning Gaps</h3>
+        <div class="gap-alert">
+          <div style="font-size:1.2rem">📐</div>
+          <div>
+            <h4>Sonny · Maths · Algebra</h4>
+            <p>Sonny has generated Algebra prompts 4 times in the last 7 days. This pattern may indicate a fundamental gap in algebraic thinking.</p>
+            <button class="btn btn-sm btn-white" style="margin-top:10px" onclick="go('builder')">Build a revision session →</button>
+          </div>
+        </div>
+        <div class="gap-alert">
+          <div style="font-size:1.2rem">📖</div>
+          <div>
+            <h4>Haze · English · Reading Comprehension</h4>
+            <p>Haze has requested help with inference-based questions twice. Worth monitoring over the next week.</p>
+            <button class="btn btn-sm btn-white" style="margin-top:10px" onclick="go('builder')">Build a revision session →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Subject Breakdown · Sonny</h3>
+        <div class="prog-wrap"><div class="prog-labels"><span>Maths</span><span style="color:var(--muted)">4 sessions</span></div><div class="prog-bar"><div class="prog-fill amber" style="width:80%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>Science</span><span style="color:var(--muted)">1 session</span></div><div class="prog-bar"><div class="prog-fill blue" style="width:20%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>English</span><span style="color:var(--muted)">0 sessions</span></div><div class="prog-bar"><div class="prog-fill" style="width:2%"></div></div></div>
+      </div>
+
+      <div class="card">
+        <h3>Subject Breakdown · Haze</h3>
+        <div class="prog-wrap"><div class="prog-labels"><span>English</span><span style="color:var(--muted)">2 sessions</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>Maths</span><span style="color:var(--muted)">0 sessions</span></div><div class="prog-bar"><div class="prog-fill" style="width:2%"></div></div></div>
+        <div class="prog-wrap"><div class="prog-labels"><span>Science</span><span style="color:var(--muted)">0 sessions</span></div><div class="prog-bar"><div class="prog-fill" style="width:2%"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+  MODAL: ADD STUDENT
+═══════════════════════════════════════ -->
+<div class="modal-bg" id="modal-add-student">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add a Student</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Student name</label>
+      <input class="form-input" placeholder="e.g. Sonny" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Year group</label>
+      <select class="form-select">
+        <option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option><option>Year 5</option><option>Year 6</option><option>Year 7</option><option>Year 8</option><option>Year 9</option><option>Year 10</option><option>Year 11</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Strengths <span class="opt">(optional)</span></label>
+      <textarea class="form-textarea" style="min-height:70px" placeholder="e.g. Good at creative writing, strong at verbal reasoning"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Areas to improve <span class="opt">(optional)</span></label>
+      <textarea class="form-textarea" style="min-height:70px" placeholder="e.g. Struggles with algebra and equation solving"></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="closeModal()">Save Student</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+const S = { subject:'Maths', helptype:'Guide step by step', 'photo-subject':'Maths' };
+
+// ── NAVIGATION ──
+function go(name) {
+  const needsNav = !['landing','signup','login'].includes(name);
+  document.getElementById('app-nav').style.display = needsNav ? 'flex' : 'none';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const map = {dashboard:'nav-dashboard',builder:'nav-builder',sessions:'nav-sessions',insights:'nav-insights'};
+  if (map[name]) document.getElementById(map[name])?.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// ── PILLS ──
+function pickPill(group, el, val) {
+  S[group] = val;
+  el.closest('.pill-row').querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ── PROMPT GENERATION ──
+function generateTutorPrompt(yearGroup, subject, topic, helpType, extraNotes) {
+  const subjectPrompts = {
+    Maths: `You are a patient, encouraging ${yearGroup} Maths tutor.\n\nThe topic is: ${topic}\n\nYour rules:\n• Do NOT give answers directly — teach first.\n• Begin by clearly explaining the concept with a simple, relatable example.\n• Ask the student a question to check their understanding before moving on.\n• Guide them step by step through the problem.\n• If the student is stuck, offer a hint — never the full answer.\n• Celebrate small wins and keep the tone positive.\n• The type of help needed is: ${helpType}\n• End every response with either a question or a small challenge.`,
+    English: `You are a supportive, thoughtful ${yearGroup} English tutor.\n\nThe topic is: ${topic}\n\nYour rules:\n• Never write answers for the student — guide them to find their own words.\n• Start by asking what they already know or think about the topic.\n• Ask questions that prompt deeper thinking: "What do you think the writer means here?"\n• Give specific, constructive feedback on their ideas.\n• Encourage re-reading and reflection before answering.\n• The type of help needed is: ${helpType}\n• End with a focused task for the student to try independently.`,
+    Science: `You are a curious, encouraging ${yearGroup} Science tutor.\n\nThe topic is: ${topic}\n\nYour rules:\n• Use real-world examples to make the science feel relevant and interesting.\n• Ask the student to predict what they think will happen before explaining.\n• Break all explanations into clear, numbered steps.\n• Check understanding with a question after each key concept.\n• Never just give the answer — guide the student to figure it out.\n• The type of help needed is: ${helpType}\n• Begin by asking what the student already knows about this topic.`
+  };
+  let prompt = subjectPrompts[subject] || subjectPrompts.Maths;
+  if (extraNotes && extraNotes.trim()) {
+    prompt += `\n\nAdditional context:\n${extraNotes.trim()}`;
+  }
+  return prompt;
+}
+
+function generatePrompt() {
+  const sel = document.getElementById('b-student').value.split('|');
+  const name = sel[0], year = sel[1];
+  const topic = document.getElementById('b-topic').value || 'the selected topic';
+  const notes = document.getElementById('b-notes').value;
+  const prompt = generateTutorPrompt(year, S.subject, topic, S.helptype, notes);
+  document.getElementById('prompt-out').innerText = prompt;
+  document.getElementById('insight-txt').innerText =
+    name === 'Sonny'
+      ? 'Sonny has used Algebra prompts 4 times this week. This may indicate a recurring difficulty. Consider a longer revision session.'
+      : 'This is Haze\'s first session on this topic this week — a great starting point!';
+  switchTab('prompt', document.querySelector('.out-tab'));
+}
+
+function liveUpdate() { /* ready for live preview if needed */ }
+
+// ── TABS ──
+function switchTab(name, el) {
+  ['prompt','flow','parent'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.out-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else document.querySelectorAll('.out-tab')[0].classList.add('active');
+}
+
+// ── COPY ──
+function copyPrompt() {
+  const t = document.getElementById('prompt-out').innerText;
+  navigator.clipboard?.writeText(t).catch(() => {});
+  const b = document.querySelector('.copy-btn');
+  b.textContent = '✓ Copied!';
+  setTimeout(() => b.innerHTML = '📋 Copy Prompt', 1800);
+}
+
+function copyPhotoPrompt() {
+  const t = document.getElementById('photo-prompt-out').innerText;
+  navigator.clipboard?.writeText(t).catch(() => {});
+}
+
+// ── PHOTO PROMPT ──
+function generatePhotoPrompt() {
+  const out = document.getElementById('photo-prompt-out');
+  out.innerHTML = '<span style="color:rgba(255,255,255,0.4)">Analysing homework photo...</span>';
+  setTimeout(() => {
+    out.innerText = `You are a patient, encouraging Year 7 Maths tutor.\n\nI'm going to share a homework question with you. Before you do anything else:\n\n1. Identify the topic and concept being tested in this question.\n2. Explain that concept clearly to me as if I've never seen it before — use a simple example.\n3. Ask me what I already understand about it.\n4. Only then guide me through the question step by step.\n5. Do NOT give me the final answer. Give hints if I'm stuck.\n6. After we finish, ask me to explain the method back to you in my own words.\n\nHere is the homework question: [paste or describe the question from the photo]\n\nAdditional context: Year 9 Maths worksheet — solving equations.`;
+  }, 1400);
+}
+
+// ── FILE UPLOAD ──
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => showPreview(ev.target.result);
+  reader.readAsDataURL(file);
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => showPreview(ev.target.result);
+  reader.readAsDataURL(file);
+}
+function showPreview(src) {
+  document.getElementById('upload-placeholder').style.display = 'none';
+  const wrap = document.getElementById('photo-preview-wrap');
+  document.getElementById('photo-preview-img').src = src;
+  wrap.style.display = 'block';
+}
+function removePhoto(e) {
+  e.stopPropagation();
+  document.getElementById('upload-placeholder').style.display = 'block';
+  document.getElementById('photo-preview-wrap').style.display = 'none';
+  document.getElementById('hw-file').value = '';
+}
+
+// ── MODAL ──
+function openAddStudent() { document.getElementById('modal-add-student').classList.add('open'); }
+function closeModal() { document.getElementById('modal-add-student').classList.remove('open'); }
+document.getElementById('modal-add-student').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
